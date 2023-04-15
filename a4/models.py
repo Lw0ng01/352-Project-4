@@ -1,4 +1,5 @@
 import nn
+import numpy as np
 
 class PerceptronModel(object):
     def __init__(self, dim):
@@ -27,6 +28,7 @@ class PerceptronModel(object):
         Returns: a node containing a single number (the score)
         """
         "*** YOUR CODE HERE ***"
+        return nn.DotProduct(self.w, x_point)
 
     def get_prediction(self, x_point):
         """
@@ -35,12 +37,25 @@ class PerceptronModel(object):
         Returns: -1 or 1
         """
         "*** YOUR CODE HERE ***"
+        score = nn.DotProduct(self.w, x_point)
+        return 1 if nn.as_scalar(score) >= 0 else -1
 
     def train_model(self, dataset):
         """
         Train the perceptron until convergence.
         """
         "*** YOUR CODE HERE ***"
+        converged = False
+        while not converged:
+            converged = True
+            for x, y in dataset.iterate_once(1):
+                x = nn.Input(x.shape).set_value(x)
+                y = nn.Input(y.shape).set_value(y)
+                prediction = self.get_prediction(x)
+                if prediction != nn.as_scalar(y):
+                    self.w.update((y * x), -1)
+                    converged = False
+
 
 class RegressionModel(object):
     """
