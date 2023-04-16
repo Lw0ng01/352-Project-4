@@ -37,25 +37,32 @@ class PerceptronModel(object):
         Returns: -1 or 1
         """
         "*** YOUR CODE HERE ***"
-        score = nn.DotProduct(self.w, x_point)
-        return 1 if nn.as_scalar(score) >= 0 else -1
+        if nn.as_scalar(nn.DotProduct(self.w, x_point)) >= 0:
+            return 1
+        # dot product is negative
+        else:
+            return -1
 
     def train_model(self, dataset):
         """
         Train the perceptron until convergence.
         """
         "*** YOUR CODE HERE ***"
-        converged = False
-        while not converged:
-            converged = True
-            for x, y in dataset.iterate_once(1):
-                x = nn.Input(x.shape).set_value(x)
-                y = nn.Input(y.shape).set_value(y)
+        keep = True
+        batch_size = 1
+        while keep:
+            # terminate while done
+            keep = False
+            # retrieve training examples from training database
+            for x, y in dataset.iterate_once(batch_size):
+                # get the prediction
                 prediction = self.get_prediction(x)
+                # check if the prediction is the same as the correct direction y
+                # if not, update the weights
                 if prediction != nn.as_scalar(y):
-                    self.w.update((y * x), -1)
-                    converged = False
-
+                    self.w.update(nn.as_scalar(y), x)
+                    keep = True
+                    
 
 class RegressionModel(object):
     """
