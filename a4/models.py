@@ -62,7 +62,7 @@ class PerceptronModel(object):
                 if prediction != nn.as_scalar(y):
                     self.w.update(nn.as_scalar(y), x)
                     keep = True
-                    
+
 
 class RegressionModel(object):
     """
@@ -74,6 +74,20 @@ class RegressionModel(object):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
 
+         # weight sizes must be batch_size X num_features
+        self.weight1 = nn.Parameter(1, 20)
+        self.weight2 = nn.Parameter(20, 10)
+        self.weight3 = nn.Parameter(10, 1)
+        # bias sizes must be 1 X num_features
+        self.b1 = nn.Parameter(1, 20)
+        self.b2 = nn.Parameter(1, 10)
+        self.b3 = nn.Parameter(1, 1)
+
+        self.batch_size = 10
+        # learning rate
+        self.lr = 0.001
+
+
     def run(self, x):
         """
         Runs the model for a batch of examples.
@@ -84,6 +98,15 @@ class RegressionModel(object):
             A node with shape (batch_size x 1) containing predicted y-values
         """
         "*** YOUR CODE HERE ***"
+
+        # f(x) = reLu(reLu(x * W1 + b1) * W2 + b2) * W3 + b3
+        # first ReLu
+        matrix1 = nn.ReLU(nn.AddBias(nn.Linear(x, self.weight1), self.b1))
+        # second ReLu
+        matrix2 = nn.ReLU(nn.AddBias(nn.Linear(matrix1, self.weight2), self.b2))
+        # prediction
+        output = nn.AddBias(nn.Linear(matrix2, self.weight3), self.b3)
+        return output
 
     def get_loss(self, x, y):
         """
@@ -97,11 +120,33 @@ class RegressionModel(object):
         """
         "*** YOUR CODE HERE ***"
 
+        return nn.SquareLoss(self.run(x), y) 
+
     def train_model(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+
+        keep = True
+        while keep:
+            # retrieve training examples from training database
+            for x, y in dataset.iterate_once(self.batch_size):
+                # get loss
+                loss = self.get_loss(x, y)
+                # get gradient vectors
+                w1, bias1, w2, bias2, w3, bias3 = nn.gradients([self.weight1, self.b1, self.weight2, self.b2,
+                                                                self.weight3, self.b3], loss)
+                # update the weights and biases by learning rate
+                self.weight1.update(-self.lr, w1)
+                self.weight2.update(-self.lr, w2)
+                self.weight3.update(-self.lr, w3)
+                self.b1.update(-self.lr, bias1)
+                self.b2.update(-self.lr, bias2)
+                self.b3.update(-self.lr, bias3)
+            # check the loss
+            if nn.as_scalar(loss) < 0.002:  # ?: 0.02 is not working there!
+                keep = False
 
 class DigitClassificationModel(object):
     """
@@ -121,6 +166,20 @@ class DigitClassificationModel(object):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
 
+        # three-layer neutral network
+        # weight sizes must be batch_size X num_features
+        self.weight1 = nn.Parameter(784, 200)  # initial wright vectors: 784-dimensional vector
+        self.weight2 = nn.Parameter(200, 100)
+        self.weight3 = nn.Parameter(100, 10)
+        # bias sizes must be 1 X num_features
+        self.b1 = nn.Parameter(1, 200)
+        self.b2 = nn.Parameter(1, 100)
+        self.b3 = nn.Parameter(1, 10)
+
+        self.batch_size = 20
+        # learning rate
+        self.lr = 0.01
+
     def run(self, x):
         """
         Runs the model for a batch of examples.
@@ -136,6 +195,14 @@ class DigitClassificationModel(object):
                 (also called logits)
         """
         "*** YOUR CODE HERE ***"
+        # first ReLu
+        matrix1 = nn.ReLU(nn.AddBias(nn.Linear(x, self.weight1), self.b1))
+        # second ReLu
+        matrix2 = nn.ReLU(nn.AddBias(nn.Linear(matrix1, self.weight2), self.b2))
+        # prediction
+        output = nn.AddBias(nn.Linear(matrix2, self.weight3), self.b3)
+        return output
+
 
     def get_loss(self, x, y):
         """
@@ -151,10 +218,33 @@ class DigitClassificationModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        return nn.SoftmaxLoss(self.run(x), y)
 
     def train_model(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+        keep = True
+        # start the training process
+        while keep:
+            # retrieve training examples from training database
+            for x, y in dataset.iterate_once(self.batch_size):
+                # get loss
+                loss = self.get_loss(x, y)
+                # get gradient vectors
+                w1, bias1, w2, bias2, w3, bias3 = nn.gradients([self.weight1, self.b1, self.weight2, self.b2,
+                                                                self.weight3, self.b3], loss)
+                # update the weights and biases by learning rate
+                self.weight1.update(-self.lr, w1)
+                self.weight2.update(-self.lr, w2)
+                self.weight3.update(-self.lr, w3)
+                self.b1.update(-self.lr, bias1)
+                self.b2.update(-self.lr, bias2)
+                self.b3.update(-self.lr, bias3)
+            # check the validation accuracy
+            # terminate when the validation accuracy achieves 97%
+            if dataset.get_validation_accuracy() > 0.97:
+                keep = False
+
 
