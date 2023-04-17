@@ -140,6 +140,7 @@ class RegressionModel(object):
                 cont = False
         # End of Loop Block
 
+
 class DigitClassificationModel(object):
     """
     A model for handwritten digit classification using the MNIST dataset.
