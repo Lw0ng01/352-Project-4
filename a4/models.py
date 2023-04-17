@@ -73,14 +73,21 @@ class RegressionModel(object):
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
-        self.bs= 10 # batch size
-        self.learningRate = 0.001
-        self.oneBias = nn.Parameter(1, 20) # Bias size
-        self.twoBias = nn.Parameter(1, 10)
-        self.threeBias = nn.Parameter(1, 1)
-        self.oneW = nn.Parameter(1, 20) # Weights size
-        self.twoW = nn.Parameter(20, 10)
-        self.threeW = nn.Parameter(10, 1)
+
+        # batch size and learning rate
+        self.batch_size = 10 
+        self.lr = 0.001
+
+        # Bias sizes
+        self.bias1 = nn.Parameter(1, 20)
+        self.bias2 = nn.Parameter(1, 10)
+        self.bias3 = nn.Parameter(1, 1)
+
+        # Weights size
+        self.weight1 = nn.Parameter(1, 20) 
+        self.weight2 = nn.Parameter(20, 10)
+        self.weight3 = nn.Parameter(10, 1)
+
     def run(self, x):
         """
         Runs the model for a batch of examples.
@@ -91,9 +98,12 @@ class RegressionModel(object):
             A node with shape (batch_size x 1) containing predicted y-values
         """
         "*** YOUR CODE HERE ***"
-        f_x = nn.ReLU(nn.AddBias(nn.Linear(x, self.oneW), self.oneBias)) # call module nn rect linear unit using x along with weight and bias
-        f_y = nn.ReLU(nn.AddBias(nn.Linear(f_x, self.twoW), self.twoBias)) # repeat for second
-        result = nn.AddBias(nn.Linear(f_y, self.threeW), self.threeBias) # use third and get result through AddBias
+
+        matrix_1 = nn.ReLU(nn.AddBias(nn.Linear(x, self.weight1), self.bias1)) # call module nn rect linear unit using x along with weight and bias
+        matrix_2 = nn.ReLU(nn.AddBias(nn.Linear(matrix_1, self.weight2), self.bias2)) # repeat for second
+
+        # return prediction
+        result = nn.AddBias(nn.Linear(matrix_2, self.weight3), self.bias3) # use third and get result through AddBias
         
         
         # return final result
@@ -109,6 +119,7 @@ class RegressionModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+
         # Compute loss for example batch, resulting in loss node
         lossNode = nn.SquareLoss(self.run(x), y) # use x, y node parameters
        
@@ -122,21 +133,22 @@ class RegressionModel(object):
         cont = True
         
         while (cont):
-            for tempOne, tempTwo in dataset.iterate_once(self.batch_size): # get examples for dataset
-                l = self.get_loss(tempOne, tempTwo) # cal get_loss
-                firstWeight, firstBias, secondWeight, secondBias, thirdWeight, thirdBias = nn.gradients([self.oneW, self.oneBias, self.twoW, self.twoBias, self.threeW, self.threeBias], l) # grad vectors
+            for x, y in dataset.iterate_once(self.batch_size): # iterate over dataset for examples
+                loss = self.get_loss(x, y) 
+                weight1, bias1, weight2, bias2, weight3, bias3 = nn.gradients([self.weight1, self.bias1, self.weight2, self.bias2, self.weight3, self.bias3], loss) # grad vectors
                
-                # updates
-                self.oneBias.update(-self.lr, firstBias) # bias
-                self.twoBias.update(-self.lr, secondBias)
-                self.threeBias.update(-self.lr, thirdBias)
+                # update biases
+                self.bias1.update(-self.lr, bias1) 
+                self.bias2.update(-self.lr, bias2)
+                self.bias3.update(-self.lr, bias3)
+
+                # update weights
+                self.weight1.update(-self.lr, weight1) 
+                self.weight2.update(-self.lr, weight2)
+                self.weight3.update(-self.lr, weight3)
                 
-                self.oneW.update(-self.lr, firstWeight) # weights
-                self.twoW.update(-self.lr, secondWeight)
-                self.threeW.update(-self.lr, thirdWeight)
                 
-                
-            if nn.as_scalar(l) < 0.002:  # check
+            if nn.as_scalar(loss) < 0.002:  # check
                 cont = False
         # End of Loop Block
 
@@ -159,17 +171,18 @@ class DigitClassificationModel(object):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
 
-        # three-layer neutral network
-        # weight sizes must be batch_size X num_features
-        self.weight1 = nn.Parameter(784, 200)  # initial wright vectors: 784-dimensional vector
+        # weight size is batch_size * num_features
+        self.weight1 = nn.Parameter(784, 200)  # initial wright vectors
         self.weight2 = nn.Parameter(200, 100)
         self.weight3 = nn.Parameter(100, 10)
+
         # bias sizes must be 1 X num_features
-        self.b1 = nn.Parameter(1, 200)
-        self.b2 = nn.Parameter(1, 100)
-        self.b3 = nn.Parameter(1, 10)
+        self.bias1 = nn.Parameter(1, 200)
+        self.bias2 = nn.Parameter(1, 100)
+        self.bias3 = nn.Parameter(1, 10)
 
         self.batch_size = 20
+
         # learning rate
         self.lr = 0.01
 
@@ -189,13 +202,13 @@ class DigitClassificationModel(object):
                 (also called logits)
         """
         "*** YOUR CODE HERE ***"
-        # first ReLu
-        matrix1 = nn.ReLU(nn.AddBias(nn.Linear(x, self.weight1), self.b1))
-        # second ReLu
-        matrix2 = nn.ReLU(nn.AddBias(nn.Linear(matrix1, self.weight2), self.b2))
-        # prediction
-        output = nn.AddBias(nn.Linear(matrix2, self.weight3), self.b3)
-        return output
+
+        matrix_1 = nn.ReLU(nn.AddBias(nn.Linear(x, self.weight1), self.bias1))
+        matrix_2 = nn.ReLU(nn.AddBias(nn.Linear(matrix_1, self.weight2), self.bias2))
+
+        # prediction statements
+        prediction = nn.AddBias(nn.Linear(matrix_2, self.weight3), self.bias3)
+        return prediction
 
 
     def get_loss(self, x, y):
@@ -219,24 +232,26 @@ class DigitClassificationModel(object):
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+
         cont = True
-        # start the training process
+
+        # while training is in process
         while cont:
-            # retrieve training examples from training database
+            # iterate over dataset
             for x, y in dataset.iterate_once(self.batch_size):
                 # get loss
-                loss = self.get_loss(x, y)
-                # get gradient vectors
-                w1, bias1, w2, bias2, w3, bias3 = nn.gradients([self.weight1, self.b1, self.weight2, self.b2,
-                                                                self.weight3, self.b3], loss)
-                # update the weights and biases by learning rate
-                self.weight1.update(-self.lr, w1)
-                self.weight2.update(-self.lr, w2)
-                self.weight3.update(-self.lr, w3)
-                self.b1.update(-self.lr, bias1)
-                self.b2.update(-self.lr, bias2)
-                self.b3.update(-self.lr, bias3)
-            # check the validation accuracy
+                loss_val = self.get_loss(x, y)
+                # gradient vectors
+                weight1, bias1, weight2, bias2, weight3, bias3 = nn.gradients([self.weight1, self.bias1, self.weight2, self.bias2,
+                                                                self.weight3, self.bias3], loss_val)
+                
+                # update weight and biases using learning rate
+                self.weight1.update(-self.lr, weight1)
+                self.weight2.update(-self.lr, weight2)
+                self.weight3.update(-self.lr, weight3)
+                self.bias1.update(-self.lr, bias1)
+                self.bias2.update(-self.lr, bias2)
+                self.bias3.update(-self.lr, bias3)
             # terminate when the validation accuracy achieves 97%
             if dataset.get_validation_accuracy() > 0.97:
                 cont = False
