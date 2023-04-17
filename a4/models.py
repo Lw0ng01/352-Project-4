@@ -48,11 +48,11 @@ class PerceptronModel(object):
         Train the perceptron until convergence.
         """
         "*** YOUR CODE HERE ***"
-        keep = True
+        cont = True
         batch_size = 1
-        while keep:
+        while cont:
             # terminate while done
-            keep = False
+            cont = False
             # retrieve training examples from training database
             for x, y in dataset.iterate_once(batch_size):
                 # get the prediction
@@ -61,7 +61,7 @@ class PerceptronModel(object):
                 # if not, update the weights
                 if prediction != nn.as_scalar(y):
                     self.w.update(nn.as_scalar(y), x)
-                    keep = True
+                    cont = True
 
 
 class RegressionModel(object):
@@ -73,21 +73,14 @@ class RegressionModel(object):
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
-
-         # weight sizes must be batch_size X num_features
-        self.weight1 = nn.Parameter(1, 20)
-        self.weight2 = nn.Parameter(20, 10)
-        self.weight3 = nn.Parameter(10, 1)
-        # bias sizes must be 1 X num_features
-        self.b1 = nn.Parameter(1, 20)
-        self.b2 = nn.Parameter(1, 10)
-        self.b3 = nn.Parameter(1, 1)
-
-        self.batch_size = 10
-        # learning rate
-        self.lr = 0.001
-
-
+        self.bs= 10 # batch size
+        self.learningRate = 0.001
+        self.oneBias = nn.Parameter(1, 20) # Bias size
+        self.twoBias = nn.Parameter(1, 10)
+        self.threeBias = nn.Parameter(1, 1)
+        self.oneW = nn.Parameter(1, 20) # Weights size
+        self.twoW = nn.Parameter(20, 10)
+        self.threeW = nn.Parameter(10, 1)
     def run(self, x):
         """
         Runs the model for a batch of examples.
@@ -98,16 +91,13 @@ class RegressionModel(object):
             A node with shape (batch_size x 1) containing predicted y-values
         """
         "*** YOUR CODE HERE ***"
-
-        # f(x) = reLu(reLu(x * W1 + b1) * W2 + b2) * W3 + b3
-        # first ReLu
-        matrix1 = nn.ReLU(nn.AddBias(nn.Linear(x, self.weight1), self.b1))
-        # second ReLu
-        matrix2 = nn.ReLU(nn.AddBias(nn.Linear(matrix1, self.weight2), self.b2))
-        # prediction
-        output = nn.AddBias(nn.Linear(matrix2, self.weight3), self.b3)
-        return output
-
+        f_x = nn.ReLU(nn.AddBias(nn.Linear(x, self.oneW), self.oneBias)) # call module nn rect linear unit using x along with weight and bias
+        f_y = nn.ReLU(nn.AddBias(nn.Linear(f_x, self.twoW), self.twoBias)) # repeat for second
+        result = nn.AddBias(nn.Linear(f_y, self.threeW), self.threeBias) # use third and get result through AddBias
+        
+        
+        # return final result
+        return result
     def get_loss(self, x, y):
         """
         Computes the loss for a batch of examples.
@@ -119,34 +109,36 @@ class RegressionModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
-
-        return nn.SquareLoss(self.run(x), y) 
-
+        # Compute loss for example batch, resulting in loss node
+        lossNode = nn.SquareLoss(self.run(x), y) # use x, y node parameters
+       
+        # Return the loss node
+        return lossNode
     def train_model(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
-
-        keep = True
-        while keep:
-            # retrieve training examples from training database
-            for x, y in dataset.iterate_once(self.batch_size):
-                # get loss
-                loss = self.get_loss(x, y)
-                # get gradient vectors
-                w1, bias1, w2, bias2, w3, bias3 = nn.gradients([self.weight1, self.b1, self.weight2, self.b2,
-                                                                self.weight3, self.b3], loss)
-                # update the weights and biases by learning rate
-                self.weight1.update(-self.lr, w1)
-                self.weight2.update(-self.lr, w2)
-                self.weight3.update(-self.lr, w3)
-                self.b1.update(-self.lr, bias1)
-                self.b2.update(-self.lr, bias2)
-                self.b3.update(-self.lr, bias3)
-            # check the loss
-            if nn.as_scalar(loss) < 0.002:  # ?: 0.02 is not working there!
-                keep = False
+        cont = True
+        
+        while (cont):
+            for tempOne, tempTwo in dataset.iterate_once(self.batch_size): # get examples for dataset
+                l = self.get_loss(tempOne, tempTwo) # cal get_loss
+                firstWeight, firstBias, secondWeight, secondBias, thirdWeight, thirdBias = nn.gradients([self.oneW, self.oneBias, self.twoW, self.twoBias, self.threeW, self.threeBias], l) # grad vectors
+               
+                # updates
+                self.oneBias.update(-self.lr, firstBias) # bias
+                self.twoBias.update(-self.lr, secondBias)
+                self.threeBias.update(-self.lr, thirdBias)
+                
+                self.oneW.update(-self.lr, firstWeight) # weights
+                self.twoW.update(-self.lr, secondWeight)
+                self.threeW.update(-self.lr, thirdWeight)
+                
+                
+            if nn.as_scalar(l) < 0.002:  # check
+                cont = False
+        # End of Loop Block
 
 class DigitClassificationModel(object):
     """
@@ -179,6 +171,7 @@ class DigitClassificationModel(object):
         self.batch_size = 20
         # learning rate
         self.lr = 0.01
+
 
     def run(self, x):
         """
@@ -225,9 +218,9 @@ class DigitClassificationModel(object):
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
-        keep = True
+        cont = True
         # start the training process
-        while keep:
+        while cont:
             # retrieve training examples from training database
             for x, y in dataset.iterate_once(self.batch_size):
                 # get loss
@@ -245,6 +238,6 @@ class DigitClassificationModel(object):
             # check the validation accuracy
             # terminate when the validation accuracy achieves 97%
             if dataset.get_validation_accuracy() > 0.97:
-                keep = False
+                cont = False
 
 
